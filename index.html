@@ -228,11 +228,13 @@ flowchart LR
     <h3>Estados de uma sessão</h3>
     <div class="mermaid">
 flowchart LR
-    S1[IDLE] -->|mensagem relevante| S2[MENU_ENVIADO]
-    S1 -->|mensagem trivial| S1
-    S2 -->|cliente digita 1-10| S3[EM_ATENDIMENTO]
-    S2 -->|resposta invalida| S2
+    S0([inicio]) --> S1[IDLE]
+    S1 -->|msg relevante| S2[MENU_ENVIADO]
+    S2 -->|numero 1-10 valido| S3[EM_ATENDIMENTO]
     S3 -->|timeout 2h| S1
+    S1 -. trivial .-> S1
+    S2 -. invalida .-> S2
+    style S0 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style S1 fill:#dcfce7,stroke:#16a34a,color:#166534
     style S2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     style S3 fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -504,8 +506,9 @@ flowchart TD
 </div>
 
 <script>
+// startOnLoad: false — vamos controlar quando renderizar
 mermaid.initialize({
-  startOnLoad: true,
+  startOnLoad: false,
   theme: 'base',
   themeVariables: {
     primaryColor: '#ede9fe',
@@ -518,6 +521,32 @@ mermaid.initialize({
   },
   flowchart: { curve: 'basis', padding: 15, useMaxWidth: true, htmlLabels: false },
   securityLevel: 'loose'
+});
+
+// Renderiza todos os diagramas de uma vez, mesmo os em abas ocultas.
+// Para isso, tornamos todas as abas visíveis temporariamente (visibility:visible
+// mas fora do fluxo), rodamos o Mermaid, depois restauramos o estado.
+document.addEventListener('DOMContentLoaded', async () => {
+  const panes = document.querySelectorAll('.pane');
+
+  // Torna todos visíveis para o Mermaid poder calcular dimensões
+  panes.forEach(p => {
+    p.style.display = 'block';
+    p.style.position = 'absolute';
+    p.style.visibility = 'hidden';
+    p.style.pointerEvents = 'none';
+  });
+
+  // Processa todos os diagramas
+  await mermaid.run({ querySelector: '.mermaid' });
+
+  // Restaura o estado original
+  panes.forEach(p => {
+    p.style.display = '';
+    p.style.position = '';
+    p.style.visibility = '';
+    p.style.pointerEvents = '';
+  });
 });
 
 function show(id, el) {
