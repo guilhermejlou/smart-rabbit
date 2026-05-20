@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smart Rabbit — Bot WeChat</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 <style>
 :root{
   --purple:#7c3aed;--purple-l:#ede9fe;
@@ -39,8 +39,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .diagram-card h3{font-size:12px;font-weight:600;margin-bottom:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .steps{display:flex;flex-direction:column;gap:12px}
 .step{display:flex;gap:16px;align-items:flex-start;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px}
-.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
-.step-body h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.step-body{flex:1}
+.step-body h4{font-size:15px;font-weight:600;margin-bottom:4px}
 .step-body p{font-size:13px;color:var(--muted);line-height:1.6}
 .step-body .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .tag{padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;font-family:monospace}
@@ -55,12 +56,26 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
 tr:last-child td{border-bottom:none}
 .node-name{font-family:monospace;font-size:12px;font-weight:600}
 .node-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
-.mermaid{min-height:40px}
-code{background:var(--gray-l);padding:1px 5px;border-radius:4px;font-size:12px}
+.mermaid{min-height:40px;text-align:center}
+.mermaid svg{max-width:100%;height:auto}
+code{background:var(--gray-l);padding:1px 5px;border-radius:4px;font-size:12px;font-family:monospace}
+.tutorial-step{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;display:flex;gap:20px;align-items:flex-start}
+.tutorial-num{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
+.tutorial-body{flex:1}
+.tutorial-body h3{font-size:17px;font-weight:600;margin-bottom:8px}
+.tutorial-body p{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+.tutorial-body .note{background:var(--amber-l);border-left:3px solid var(--amber);padding:10px 14px;border-radius:6px;font-size:13px;color:#78350f;margin-top:12px}
+.tutorial-body .ok{background:var(--green-l);border-left:3px solid var(--green);padding:10px 14px;border-radius:6px;font-size:13px;color:#166534;margin-top:12px}
+.tutorial-body kbd{background:#1f2937;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px;font-weight:600;box-shadow:0 1px 0 #000}
+.checklist{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;margin-top:20px}
+.checklist h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.checklist ul{list-style:none}
+.checklist li{padding:8px 0;border-bottom:1px dashed var(--border);font-size:14px;display:flex;align-items:center;gap:10px}
+.checklist li:last-child{border:none}
+.checklist li::before{content:"OK";color:var(--green);font-weight:700;font-size:11px;background:var(--green-l);padding:2px 6px;border-radius:3px}
 </style>
 </head>
 <body>
-
 <div class="header">
   <h1>🐰 Smart Rabbit</h1>
   <p>Bot de atendimento WeChat — documentação visual dos fluxos</p>
@@ -73,7 +88,8 @@ code{background:var(--gray-l);padding:1px 5px;border-radius:4px;font-size:12px}
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="show('overview',this)"><span class="dot" style="background:#7c3aed"></span>Visão Geral</div>
+  <div class="tab active" onclick="show('tutorial',this)"><span class="dot" style="background:#16a34a"></span>🚀 Como Iniciar</div>
+  <div class="tab" onclick="show('overview',this)"><span class="dot" style="background:#7c3aed"></span>Visão Geral</div>
   <div class="tab" onclick="show('cap',this)"><span class="dot" style="background:#16a34a"></span>1. Captura</div>
   <div class="tab" onclick="show('dec',this)"><span class="dot" style="background:#1d4ed8"></span>2. Decisor</div>
   <div class="tab" onclick="show('man',this)"><span class="dot" style="background:#b45309"></span>3. Manutenção</div>
@@ -82,8 +98,94 @@ code{background:var(--gray-l);padding:1px 5px;border-radius:4px;font-size:12px}
 
 <div class="content">
 
-<!-- ══════════ VISÃO GERAL ══════════ -->
-<div class="pane active" id="pane-overview">
+<div class="pane active" id="pane-tutorial">
+  <p class="section-title">Como ligar o sistema todos os dias</p>
+  <p class="section-sub">Tutorial passo a passo do que fazer para o bot começar a funcionar. Demora cerca de 1 a 2 minutos do início ao fim.</p>
+
+  <div class="tutorial-step">
+    <div class="tutorial-num">1</div>
+    <div class="tutorial-body">
+      <h3>Ligue o computador</h3>
+      <p>Aperte o botão de ligar e aguarde o Windows abrir normalmente. Não precisa fazer login em nada ainda — só esperar a tela inicial aparecer.</p>
+    </div>
+  </div>
+
+  <div class="tutorial-step">
+    <div class="tutorial-num">2</div>
+    <div class="tutorial-body">
+      <h3>O n8n começa sozinho</h3>
+      <p>O n8n está configurado para iniciar automaticamente junto com o Windows. Você não precisa abrir nada — basta esperar alguns segundos enquanto ele carrega em segundo plano.</p>
+      <div class="note">⏱ <strong>Tempo de espera:</strong> aproximadamente 30 a 60 segundos depois que o Windows terminar de abrir.</div>
+    </div>
+  </div>
+
+  <div class="tutorial-step">
+    <div class="tutorial-num">3</div>
+    <div class="tutorial-body">
+      <h3>Abra o navegador no n8n</h3>
+      <p>Quando o n8n estiver pronto, aperte a tecla <kbd>O</kbd> do teclado. Isso vai abrir o navegador direto na tela do n8n, onde os fluxos do bot rodam.</p>
+      <div class="ok">✅ <strong>Como saber se deu certo:</strong> aparece a interface do n8n no navegador, com os 3 workflows listados (Captura, Decisor, Manutenção) todos com a luzinha verde (ativos).</div>
+    </div>
+  </div>
+
+  <div class="tutorial-step">
+    <div class="tutorial-num">4</div>
+    <div class="tutorial-body">
+      <h3>Abra o WeChat</h3>
+      <p>Clique no ícone do WeChat na barra de tarefas (ou na área de trabalho) e faça login normalmente na conta do bot — o usuário 客服AI 小兔. Aguarde até que todos os grupos apareçam carregados.</p>
+      <div class="note">📱 <strong>Importante:</strong> o WeChat precisa estar logado e com os grupos visíveis <em>antes</em> de abrir o RPA.</div>
+    </div>
+  </div>
+
+  <div class="tutorial-step">
+    <div class="tutorial-num">5</div>
+    <div class="tutorial-body">
+      <h3>Abra o RPA e conecte ao WeChat</h3>
+      <p>Inicie o programa do RPA do WeChat. Ele vai detectar o WeChat aberto e fazer a conexão automaticamente. Confirme que aparece a mensagem de "conectado" antes de continuar.</p>
+      <div class="ok">✅ <strong>Confirmação:</strong> o RPA mostra status "online" e o webhook está apontando para o n8n local.</div>
+    </div>
+  </div>
+
+  <div class="tutorial-step">
+    <div class="tutorial-num">6</div>
+    <div class="tutorial-body">
+      <h3>Pronto! O sistema está operando</h3>
+      <p>A partir deste momento, qualquer mensagem que chegar nos grupos será automaticamente processada pelo bot. Você pode minimizar todas as janelas e deixar rodando em segundo plano.</p>
+      <div class="ok">🎉 <strong>Sistema ativo:</strong> Captura, Decisor e Manutenção rodando. Bot pronto para atender.</div>
+    </div>
+  </div>
+
+  <div class="checklist">
+    <h3>Checklist final — tudo deve estar OK</h3>
+    <ul>
+      <li>Computador ligado e Windows carregado</li>
+      <li>n8n rodando (3 workflows com luz verde)</li>
+      <li>Navegador aberto na tela do n8n</li>
+      <li>WeChat logado na conta do bot</li>
+      <li>RPA conectado e com status "online"</li>
+    </ul>
+  </div>
+
+  <div class="diagram-card" style="margin-top:20px">
+    <h3>Resumo visual</h3>
+    <div class="mermaid">
+flowchart LR
+    A[Ligar PC] --> B[n8n inicia sozinho]
+    B --> C[Tecla O abre navegador]
+    C --> D[Abrir WeChat]
+    D --> E[Abrir RPA]
+    E --> F[Sistema operando]
+    style A fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    style B fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style C fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style D fill:#fef3c7,stroke:#b45309,color:#78350f
+    style E fill:#fef3c7,stroke:#b45309,color:#78350f
+    style F fill:#dcfce7,stroke:#16a34a,color:#166534
+    </div>
+  </div>
+</div>
+
+<div class="pane" id="pane-overview">
   <p class="section-title">Como o sistema funciona</p>
   <p class="section-sub">Três fluxos independentes que trabalham em conjunto. O Captura é ativado por mensagens em tempo real; o Decisor roda sozinho a cada 30 segundos; a Manutenção limpa a base a cada 15 minutos.</p>
 
@@ -98,17 +200,17 @@ code{background:var(--gray-l);padding:1px 5px;border-radius:4px;font-size:12px}
     <h3>Arquitetura geral</h3>
     <div class="mermaid">
 flowchart LR
-    WC(["WeChat<br/>Cliente"]) -->|mensagem| RPA["RPA Local"]
-    RPA -->|POST webhook| F1["Fluxo 1<br/>Captura"]
-    F1 -->|grava| DB[("data_base")]
-    SCH(["30s"]) --> F2["Fluxo 2<br/>Decisor"]
-    F2 -->|le nao processados| DB
-    F2 -->|le e atualiza| SE[("sessions")]
-    F2 -->|le| AT[("atendentes")]
+    WC[WeChat Cliente] -->|mensagem| RPA[RPA Local]
+    RPA -->|POST webhook| F1[Fluxo 1 Captura]
+    F1 -->|grava| DB[(data_base)]
+    SCH[Agenda 30s] --> F2[Fluxo 2 Decisor]
+    F2 -->|le| DB
+    F2 -->|atualiza| SE[(sessions)]
+    F2 -->|le| AT[(atendentes)]
     F2 -->|envia msgs| RPA
-    SCH2(["15min"]) --> F3["Fluxo 3<br/>Manutencao"]
-    F3 -->|limpa +6h| DB
-    F3 -->|reseta +2h| SE
+    SCH2[Agenda 15min] --> F3[Fluxo 3 Manutencao]
+    F3 -->|limpa| DB
+    F3 -->|reseta| SE
     style F1 fill:#dcfce7,stroke:#16a34a,color:#166534
     style F2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     style F3 fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -117,25 +219,27 @@ flowchart LR
     style AT fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style RPA fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style WC fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    style SCH fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    style SCH2 fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     </div>
   </div>
 
   <div class="diagram-card">
-    <h3>Estados de uma sessão (por grupo)</h3>
+    <h3>Estados de uma sessão</h3>
     <div class="mermaid">
-stateDiagram-v2
-    direction LR
-    [*] --> IDLE : grupo novo
-    IDLE --> IDLE : mensagem trivial
-    IDLE --> MENU_ENVIADO : mensagem relevante
-    MENU_ENVIADO --> MENU_ENVIADO : resposta invalida
-    MENU_ENVIADO --> EM_ATENDIMENTO : cliente digita 1 a 10
-    EM_ATENDIMENTO --> IDLE : timeout 2h sem mensagem
+flowchart LR
+    S1[IDLE] -->|mensagem relevante| S2[MENU_ENVIADO]
+    S1 -->|mensagem trivial| S1
+    S2 -->|cliente digita 1-10| S3[EM_ATENDIMENTO]
+    S2 -->|resposta invalida| S2
+    S3 -->|timeout 2h| S1
+    style S1 fill:#dcfce7,stroke:#16a34a,color:#166534
+    style S2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style S3 fill:#fef3c7,stroke:#b45309,color:#78350f
     </div>
   </div>
 </div>
 
-<!-- ══════════ CAPTURA ══════════ -->
 <div class="pane" id="pane-cap">
   <p class="section-title">Fluxo 1 — Captura</p>
   <p class="section-sub">Ativado em tempo real a cada mensagem. Só registra — não toma nenhuma decisão. Rápido e simples.</p>
@@ -148,10 +252,9 @@ stateDiagram-v2
 
   <div class="diagram-card">
     <div class="mermaid">
-flowchart TD
-    A(["Webhook<br/>POST /wechat-receive"]) --> B
-    B["Normalize Fields<br/>─────────────────<br/>Extrai campos do JSON<br/>Converte send_time para -03:00<br/>Define processado = FALSE"] --> C
-    C[("Append data_base<br/>─────────────────<br/>Nova linha na planilha")]
+flowchart LR
+    A[Webhook POST wechat-receive] --> B[Normalize Fields converte horario processado FALSE]
+    B --> C[(Append data_base nova linha)]
     style A fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style B fill:#fef3c7,stroke:#b45309,color:#78350f
     style C fill:#dcfce7,stroke:#16a34a,color:#166534
@@ -162,7 +265,7 @@ flowchart TD
     <h3>Conversão de horário</h3>
     <div class="mermaid">
 flowchart LR
-    A["send_time<br/>1779239154<br/>Unix UTC"] -->|"DateTime.fromSeconds<br/>.setZone(Sao_Paulo)"| B["send_time_local<br/>2026-05-19 22:05:54<br/>Brasilia -03:00"]
+    A[send_time 1779239154 Unix UTC] -->|fromSeconds setZone| B[send_time_local 2026-05-19 22:05:54 Brasilia]
     style A fill:#fef3c7,stroke:#b45309,color:#78350f
     style B fill:#dcfce7,stroke:#16a34a,color:#166534
     </div>
@@ -184,7 +287,6 @@ flowchart LR
   </div>
 </div>
 
-<!-- ══════════ DECISOR ══════════ -->
 <div class="pane" id="pane-dec">
   <p class="section-title">Fluxo 2 — Decisor</p>
   <p class="section-sub">O fluxo principal. Roda automaticamente a cada 30 segundos, lê as mensagens novas e decide o que fazer com cada grupo.</p>
@@ -194,29 +296,27 @@ flowchart LR
     <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>Google Sheets</div>
     <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>HTTP / WeChat</div>
     <div class="legend-item"><div class="legend-dot" style="background:#b45309"></div>Lógica</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Cérebro (Code)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Cérebro Code</div>
   </div>
 
   <div class="diagram-card">
     <div class="mermaid">
 flowchart TD
-    A(["Every 30s"]) --> B
-    B[("Read data_base<br/>processado = FALSE")]
-    B --> C{"Tem mensagens?"}
-    C -- Nao --> Z(["Fim sem acao"])
-    C -- Sim --> D[("Read sessions<br/>todos os grupos")]
-    D --> E[("Read atendentes<br/>opcao para wxid")]
-    E --> F["Decide Actions<br/>──────────────<br/>Filtra · Agrupa · Debounce<br/>Verifica permissao<br/>Decide por estado"]
-    F --> G{"Switch action"}
-    G -- send_menu --> H["HTTP Send Menu<br/>menu para o grupo"]
-    G -- call_atendente --> I["HTTP Notify Room<br/>avisa o grupo"]
-    I --> J["HTTP DM Atendente<br/>mensagem privada"]
-    G -- ignore --> K
+    A[Every 30s] --> B[(Read data_base processado FALSE)]
+    B --> C{Tem mensagens}
+    C -->|Nao| Z[Fim sem acao]
+    C -->|Sim| D[(Read sessions)]
+    D --> E[(Read atendentes)]
+    E --> F[Decide Actions Filtra agrupa decide]
+    F --> G{Switch action}
+    G -->|send_menu| H[HTTP Send Menu]
+    G -->|call_atendente| I[HTTP Notify Room]
+    G -->|ignore| K[(Upsert sessions)]
+    I --> J[HTTP DM Atendente]
     H --> K
     J --> K
-    K[("Upsert sessions<br/>cria ou atualiza estado")]
-    K --> L["Split rows_to_mark"]
-    L --> M[("Mark data_base processed<br/>processado=TRUE")]
+    K --> L[Split rows_to_mark]
+    L --> M[(Mark data_base processed)]
     style A fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style B fill:#dcfce7,stroke:#16a34a,color:#166534
     style C fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -240,9 +340,9 @@ flowchart TD
       <tr><th>Nó</th><th>Tipo</th><th>O que faz</th></tr>
       <tr><td class="node-name">Every 30s</td><td><span class="node-badge" style="background:#ede9fe;color:#4c1d95">Trigger</span></td><td>Dispara o fluxo automaticamente a cada 30 segundos</td></tr>
       <tr><td class="node-name">Read data_base</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Busca linhas com processado = FALSE</td></tr>
-      <tr><td class="node-name">If</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Para se não houver mensagens (economiza quota da API do Google)</td></tr>
+      <tr><td class="node-name">If</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Para se não houver mensagens (economiza quota da API)</td></tr>
       <tr><td class="node-name">Read sessions</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Carrega o estado atual de todos os grupos</td></tr>
-      <tr><td class="node-name">Read atendentes</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Carrega a tabela opcao → atendente</td></tr>
+      <tr><td class="node-name">Read atendentes</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Carrega a tabela opcao para atendente</td></tr>
       <tr><td class="node-name">Decide Actions</td><td><span class="node-badge" style="background:#fee2e2;color:#7f1d1d">Cérebro</span></td><td>Todo o raciocínio do bot acontece aqui</td></tr>
       <tr><td class="node-name">Switch action</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Direciona para send_menu / call_atendente / ignore</td></tr>
       <tr><td class="node-name">HTTP Send Menu</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Envia o menu de opções para o grupo</td></tr>
@@ -255,7 +355,6 @@ flowchart TD
   </div>
 </div>
 
-<!-- ══════════ MANUTENÇÃO ══════════ -->
 <div class="pane" id="pane-man">
   <p class="section-title">Fluxo 3 — Manutenção</p>
   <p class="section-sub">Roda a cada 15 minutos em segundo plano. Duas limpezas independentes e paralelas: uma na data_base e outra nas sessions.</p>
@@ -270,20 +369,14 @@ flowchart TD
   <div class="diagram-card">
     <div class="mermaid">
 flowchart TD
-    A(["Every 15min"]) --> B & D
-
-    subgraph Limpeza["Limpeza da data_base"]
-      B[("Read data_base")] --> C{"data_hora_legivel<br/>acima de 6 horas?"}
-      C -- Nao --> C1(["Ignora"])
-      C -- Sim --> DEL["Delete row<br/>Apaga linha"]
-    end
-
-    subgraph Reset["Reset de sessoes paradas"]
-      D[("Read sessions")] --> E{"last_user_msg_at<br/>acima de 2h e nao IDLE?"}
-      E -- Nao --> E1(["Ignora"])
-      E -- Sim --> RST[("Reset to IDLE<br/>estado = IDLE")]
-    end
-
+    A[Every 15min] --> B[(Read data_base)]
+    A --> D[(Read sessions)]
+    B --> C{data_hora maior que 6h}
+    C -->|Nao| C1[Ignora]
+    C -->|Sim| DEL[Delete row]
+    D --> E{last_user maior que 2h e nao IDLE}
+    E -->|Nao| E1[Ignora]
+    E -->|Sim| RST[(Reset to IDLE)]
     style A fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style B fill:#dcfce7,stroke:#16a34a,color:#166534
     style C fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -291,6 +384,8 @@ flowchart TD
     style D fill:#dcfce7,stroke:#16a34a,color:#166534
     style E fill:#fef3c7,stroke:#b45309,color:#78350f
     style RST fill:#dcfce7,stroke:#16a34a,color:#166534
+    style C1 fill:#f3f4f6,stroke:#9ca3af,color:#374151
+    style E1 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     </div>
   </div>
 
@@ -301,13 +396,12 @@ flowchart TD
       <tr><td class="node-name">estado</td><td>IDLE</td><td>Volta para o estado inicial</td></tr>
       <tr><td class="node-name">opcao_escolhida</td><td>(vazio)</td><td>Limpo</td></tr>
       <tr><td class="node-name">atendente_wxid</td><td>(vazio)</td><td>Limpo</td></tr>
-      <tr><td class="node-name">bot_permission</td><td>✅ Preservado</td><td>Admin não perde a permissão que configurou</td></tr>
-      <tr><td class="node-name">last_user_msg_at</td><td>✅ Preservado</td><td>Mantido para rastreabilidade</td></tr>
+      <tr><td class="node-name">bot_permission</td><td>Preservado</td><td>Admin não perde a permissão que configurou</td></tr>
+      <tr><td class="node-name">last_user_msg_at</td><td>Preservado</td><td>Mantido para rastreabilidade</td></tr>
     </table>
   </div>
 </div>
 
-<!-- ══════════ DECIDE ACTIONS ══════════ -->
 <div class="pane" id="pane-brain">
   <p class="section-title">🧠 Nó Decide Actions — O Cérebro</p>
   <p class="section-sub">Único nó com código JavaScript. Processa todas as mensagens novas de uma vez e decide o que fazer com cada grupo.</p>
@@ -316,27 +410,24 @@ flowchart TD
     <h3>Fluxo de decisão completo</h3>
     <div class="mermaid">
 flowchart TD
-    IN(["Entrada<br/>msgs + sessions + atendentes"]) --> F1
-    F1{"msg_type = TEXT<br/>sender != bot<br/>room tem @chatroom?"}
-    F1 -- Nao --> IGN0["Descarta<br/>nao entra no processamento"]
-    F1 -- Sim --> F2["Agrupa por room_id<br/>pega a mais recente de cada grupo"]
-    F2 --> F3{"send_time<br/>menos de 3s atras?"}
-    F3 -- Sim --> WAIT["Aguarda proxima rodada<br/>debounce ativo"]
-    F3 -- Nao --> F4{"session existe<br/>e bot_permission = 1?"}
-    F4 -- Nao --> NOPERM["BOT_SEM_PERMISSAO<br/>marca processado, nada enviado"]
-    F4 -- Sim --> F5{"Estado atual<br/>do grupo?"}
-    F5 -- IDLE --> F6{"Mensagem<br/>e trivial?"}
-    F6 -- Sim --> IGN1["IGNORADA_TRIVIAL<br/>nenhuma acao"]
-    F6 -- Nao --> ACT1["ENVIOU_MENU<br/>envia menu ao grupo"]
-    F5 -- MENU_ENVIADO --> F8{"Contem numero<br/>de 1 a 10?"}
-    F8 -- Nao --> IGN2["IGNORADA_INVALIDA<br/>bot fica em silencio"]
-    F8 -- Sim --> F9{"Atendente<br/>cadastrado?"}
-    F9 -- Nao --> IGN2
-    F9 -- Sim --> ACT2["CHAMOU_ATENDENTE<br/>avisa grupo e atendente"]
-    F5 -- EM_ATENDIMENTO --> IGN3["IGNORADA_EM_ATENDIMENTO<br/>atendente cuida"]
-    IGN1 & IGN2 & IGN3 & NOPERM & ACT1 & ACT2 --> OUT(["Saida<br/>lista de acoes"])
+    IN[Entrada msgs sessions atendentes] --> F1{E texto nao bot e grupo}
+    F1 -->|Nao| IGN0[Descarta]
+    F1 -->|Sim| F2[Agrupa por room_id pega a mais recente]
+    F2 --> F3{Menos de 3s atras}
+    F3 -->|Sim| WAIT[Aguarda proxima rodada]
+    F3 -->|Nao| F4{Permissao igual 1}
+    F4 -->|Nao| NOPERM[BOT_SEM_PERMISSAO]
+    F4 -->|Sim| F5{Estado atual}
+    F5 -->|IDLE| F6{E trivial}
+    F6 -->|Sim| IGN1[IGNORADA_TRIVIAL]
+    F6 -->|Nao| ACT1[ENVIOU_MENU]
+    F5 -->|MENU_ENVIADO| F8{Numero 1 a 10}
+    F8 -->|Nao| IGN2[IGNORADA_INVALIDA]
+    F8 -->|Sim| F9{Atendente existe}
+    F9 -->|Nao| IGN2
+    F9 -->|Sim| ACT2[CHAMOU_ATENDENTE]
+    F5 -->|EM_ATENDIMENTO| IGN3[IGNORADA_EM_ATENDIMENTO]
     style IN fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
-    style OUT fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style F1 fill:#fef3c7,stroke:#b45309,color:#78350f
     style F2 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style F3 fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -410,7 +501,7 @@ flowchart TD
   </div>
 </div>
 
-</div><!-- /content -->
+</div>
 
 <script>
 mermaid.initialize({
@@ -423,12 +514,10 @@ mermaid.initialize({
     lineColor: '#6b7280',
     secondaryColor: '#f3f4f6',
     tertiaryColor: '#ffffff',
-    edgeLabelBackground: '#ffffff',
-    fontSize: '14px',
+    fontSize: '14px'
   },
-  flowchart: { curve: 'basis', padding: 20, htmlLabels: true },
-  stateDiagram: { useMaxWidth: true },
-  securityLevel: 'loose',
+  flowchart: { curve: 'basis', padding: 15, useMaxWidth: true, htmlLabels: false },
+  securityLevel: 'loose'
 });
 
 function show(id, el) {
