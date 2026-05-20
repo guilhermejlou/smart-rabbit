@@ -442,13 +442,18 @@ flowchart TD
     <div class="mermaid">
 flowchart TD
     A[Every 15min] --> B[(Read data_base)]
-    A --> D[(Read sessions)]
-    B --> C{data_hora maior que 6h}
+    A --> D[(Read sessions reset)]
+    A --> F[(Read sessions alert)]
+    B --> C{mais de 6h}
     C -->|Nao| C1[Ignora]
     C -->|Sim| DEL[Delete row]
-    D --> E{last_user maior que 2h e nao IDLE}
+    D --> E{mais de 2h e nao IDLE}
     E -->|Nao| E1[Ignora]
     E -->|Sim| RST[(Reset to IDLE)]
+    F --> G{EM_ATENDIMENTO e atendente chamado ha mais de 15min e alerta nao enviado}
+    G -->|Nao| G1[Ignora]
+    G -->|Sim| HTTP[HTTP Alert to Room]
+    HTTP --> MRK[(Mark alerta_enviado TRUE)]
     style A fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style B fill:#dcfce7,stroke:#16a34a,color:#166534
     style C fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -458,6 +463,11 @@ flowchart TD
     style RST fill:#dcfce7,stroke:#16a34a,color:#166534
     style C1 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style E1 fill:#f3f4f6,stroke:#9ca3af,color:#374151
+    style F fill:#dcfce7,stroke:#16a34a,color:#166534
+    style G fill:#fef3c7,stroke:#b45309,color:#78350f
+    style G1 fill:#f3f4f6,stroke:#9ca3af,color:#374151
+    style HTTP fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style MRK fill:#dcfce7,stroke:#16a34a,color:#166534
     </div>
   </div>
 
@@ -468,8 +478,32 @@ flowchart TD
       <tr><td class="node-name">estado</td><td>IDLE</td><td>Volta para o estado inicial</td></tr>
       <tr><td class="node-name">opcao_escolhida</td><td>(vazio)</td><td>Limpo</td></tr>
       <tr><td class="node-name">atendente_wxid</td><td>(vazio)</td><td>Limpo</td></tr>
+      <tr><td class="node-name">atendente_chamado_at</td><td>(vazio)</td><td>Limpo — timer do alerta de 15min reinicia no próximo atendimento</td></tr>
+      <tr><td class="node-name">alerta_enviado</td><td>FALSE</td><td>Resetado para o próximo atendimento</td></tr>
       <tr><td class="node-name">bot_permission</td><td>Preservado</td><td>Admin não perde a permissão que configurou</td></tr>
       <tr><td class="node-name">last_user_msg_at</td><td>Preservado</td><td>Mantido para rastreabilidade</td></tr>
+    </table>
+  </div>
+
+  <div class="diagram-card" style="border-left:4px solid #1d4ed8">
+    <h3>🔔 Alerta de 15 minutos — como funciona</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px">
+      Se o cliente escolheu uma opção, o bot chamou o atendente, mas <strong>ninguém respondeu em 15 minutos</strong>,
+      o bot envia automaticamente esta mensagem no grupo:
+    </p>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 18px;font-size:14px;color:#0c4a6e;font-family:'Segoe UI',sans-serif;margin-bottom:16px">
+      您好！目前我们的客服人员均在忙碌，暂时无法及时响应。我们将在处理完成后尽快与您联系。感谢您的理解！
+    </div>
+    <table>
+      <tr><th>Campo em sessions</th><th>Papel</th></tr>
+      <tr>
+        <td class="node-name">atendente_chamado_at</td>
+        <td>Registrado no momento exato em que o bot chama o atendente. O timer de 15 min é calculado a partir daqui.</td>
+      </tr>
+      <tr>
+        <td class="node-name">alerta_enviado</td>
+        <td><code>FALSE</code> quando o atendente é chamado. Vira <code>TRUE</code> após o alerta ser enviado — evita repetição.</td>
+      </tr>
     </table>
   </div>
 </div>
