@@ -194,6 +194,7 @@ flowchart LR
     <div class="arch-card"><div class="icon">🧠</div><h4>Fluxo 2 — Decisor</h4><p>A cada 30s verifica mensagens novas e decide: envia menu, chama atendente, ou ignora.</p></div>
     <div class="arch-card"><div class="icon">🧹</div><h4>Fluxo 3 — Manutenção</h4><p>A cada 15min apaga histórico antigo (+6h) e reseta sessões paradas (+2h) de volta para IDLE.</p></div>
     <div class="arch-card"><div class="icon">📊</div><h4>Google Sheets</h4><p>Memória do sistema. Três abas: <code>data_base</code>, <code>sessions</code>, <code>atendentes</code>.</p></div>
+    <div class="arch-card" style="border-left:3px solid #1d4ed8"><div class="icon">🔔</div><h4>Alerta de 15 minutos</h4><p>Se nenhum atendente responder em 15 min após ser chamado, o bot avisa automaticamente o cliente no grupo.</p></div>
   </div>
 
   <div class="diagram-card">
@@ -230,14 +231,17 @@ flowchart LR
 flowchart LR
     S0([inicio]) --> S1[IDLE]
     S1 -->|msg relevante| S2[MENU_ENVIADO]
-    S2 -->|numero 1-10 valido| S3[EM_ATENDIMENTO]
+    S2 -->|numero 1-10| S3[EM_ATENDIMENTO]
     S3 -->|timeout 2h| S1
+    S3 -. 15min sem resposta .-> ALERTA[Bot avisa cliente]
+    ALERTA -. continua .-> S3
     S1 -. trivial .-> S1
     S2 -. invalida .-> S2
     style S0 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style S1 fill:#dcfce7,stroke:#16a34a,color:#166534
     style S2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     style S3 fill:#fef3c7,stroke:#b45309,color:#78350f
+    style ALERTA fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     </div>
   </div>
 </div>
@@ -372,9 +376,26 @@ flowchart TD
       </tr>
       <tr>
         <td><span class="node-badge" style="background:#fef3c7;color:#78350f">EM_ATENDIMENTO</span></td>
-        <td>O atendente foi chamado e está (ou deveria estar) cuidando do grupo.</td>
-        <td>O atendente humano — o bot fica completamente silencioso</td>
+        <td>O atendente foi chamado e está (ou deveria estar) cuidando do grupo. Se 15 min passarem sem resposta, o bot envia aviso automático ao cliente.</td>
+        <td>O atendente humano — o bot fica silencioso, exceto pelo alerta de 15 min</td>
       </tr>
+    </table>
+  </div>
+
+  <div class="diagram-card">
+    <h3>Colunas da aba <code>sessions</code> — referência completa</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">O Decisor lê e atualiza estas colunas a cada ciclo. As duas últimas foram adicionadas para o sistema de alerta de 15 minutos.</p>
+    <table>
+      <tr><th>Coluna</th><th>Quem escreve</th><th>O que guarda</th></tr>
+      <tr><td class="node-name">room_id</td><td>Decisor</td><td>ID do grupo no WeChat — chave primária da tabela</td></tr>
+      <tr><td class="node-name">estado</td><td>Decisor</td><td><code>IDLE</code> / <code>MENU_ENVIADO</code> / <code>EM_ATENDIMENTO</code></td></tr>
+      <tr><td class="node-name">bot_permission</td><td>Admin (manual)</td><td><code>0</code> = bot inativo &nbsp;|&nbsp; <code>1</code> = bot ativo</td></tr>
+      <tr><td class="node-name">last_user_msg_at</td><td>Decisor</td><td>Horário da última mensagem do cliente. Usado pela Manutenção para o reset de 2h.</td></tr>
+      <tr><td class="node-name">last_bot_action_at</td><td>Decisor</td><td>Horário da última ação do bot (qualquer ação, inclusive ignores).</td></tr>
+      <tr><td class="node-name">opcao_escolhida</td><td>Decisor</td><td>Número (1-10) que o cliente selecionou no menu.</td></tr>
+      <tr><td class="node-name">atendente_wxid</td><td>Decisor</td><td>wxid do atendente que foi chamado.</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8">atendente_chamado_at</td><td>Decisor</td><td><strong>Novo.</strong> Horário exato em que o bot chamou o atendente. Timer de base para o alerta de 15 min.</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8">alerta_enviado</td><td>Decisor / Manutenção</td><td><strong>Novo.</strong> <code>FALSE</code> quando atendente é chamado. Vira <code>TRUE</code> após o alerta de 15 min ser enviado — evita repetição.</td></tr>
     </table>
   </div>
 
@@ -578,7 +599,7 @@ flowchart TD
       </div>
       <div class="step">
         <div class="step-num" style="background:#dbeafe;color:#1e3a8a">6</div>
-        <div class="step-body"><h4>Roteamento — MENU_ENVIADO</h4><p>Aguarda o cliente escolher 1-10. Aceita "3", "(3)", "选3" etc. Se válido e atendente cadastrado, chama. Caso contrário, silêncio.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_RESPOSTA_INVALIDA_NO_MENU</span><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></div></div>
+        <div class="step-body"><h4>Roteamento — MENU_ENVIADO</h4><p>Aguarda o cliente escolher 1-10. Aceita "3", "(3)", "选3" etc. Se válido e atendente cadastrado, chama o atendente via HTTP (grupo + mensagem privada) e grava <code>atendente_chamado_at</code> com o horário exato — esse campo é usado pelo Fluxo 3 para disparar o alerta de 15 min. Também define <code>alerta_enviado = FALSE</code>. Caso a resposta seja inválida, silêncio.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_RESPOSTA_INVALIDA_NO_MENU</span><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></div></div>
       </div>
       <div class="step">
         <div class="step-num" style="background:#f3f4f6;color:#374151">7</div>
@@ -589,6 +610,27 @@ flowchart TD
         <div class="step-body"><h4>Limpeza das linhas restantes</h4><p>Após processar clientes, marca como processado tudo que sobrou (bot, atendentes, imagens). Garante que nenhuma linha acumule.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_NAO_CLIENTE</span></div></div>
       </div>
     </div>
+  </div>
+
+  <div class="diagram-card" style="border-left:4px solid #1d4ed8">
+    <h3>Campos gravados no Upsert sessions — referência v2</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">
+      Para cada ação, o Decisor devolve estes campos no output do Code node. O nó <code>Upsert sessions</code> usa todos eles.
+      Os campos marcados em azul são novos na v2.
+    </p>
+    <table>
+      <tr><th>Campo</th><th>send_menu</th><th>call_atendente</th><th>ignore</th></tr>
+      <tr><td class="node-name">estado</td><td>MENU_ENVIADO</td><td>EM_ATENDIMENTO</td><td>preserva atual</td></tr>
+      <tr><td class="node-name">last_user_msg_at</td><td>agora</td><td>agora</td><td>preserva / agora</td></tr>
+      <tr><td class="node-name">bot_permission</td><td>preserva</td><td>preserva</td><td>preserva</td></tr>
+      <tr><td class="node-name">opcao_escolhida</td><td>—</td><td>N (ex: "3")</td><td>preserva</td></tr>
+      <tr><td class="node-name">atendente_wxid</td><td>—</td><td>wxid do atendente</td><td>preserva</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8;font-weight:700">atendente_chamado_at</td><td>preserva</td><td><strong>agora (timestamp)</strong></td><td>preserva</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8;font-weight:700">alerta_enviado</td><td>preserva</td><td><strong>FALSE (reset)</strong></td><td>preserva</td></tr>
+    </table>
+    <p style="font-size:12px;color:#9ca3af;margin-top:12px">
+      "preserva" = devolve o valor que já estava em sessions, para o Upsert não sobrescrever com vazio.
+    </p>
   </div>
 
   <div class="diagram-card">
