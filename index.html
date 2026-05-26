@@ -84,6 +84,7 @@ code{background:var(--gray-l);padding:1px 5px;border-radius:4px;font-size:12px;f
     <span class="badge">Google Sheets</span>
     <span class="badge">WeChat RPA</span>
     <span class="badge">3 Workflows</span>
+    <span class="badge">OpenAI GPT-4o-mini</span>
   </div>
 </div>
 
@@ -191,9 +192,10 @@ flowchart LR
 
   <div class="arch-grid">
     <div class="arch-card"><div class="icon">📨</div><h4>Fluxo 1 — Captura</h4><p>Recebe cada mensagem do WeChat via webhook e grava na planilha. Não toma nenhuma decisão.</p></div>
-    <div class="arch-card"><div class="icon">🧠</div><h4>Fluxo 2 — Decisor</h4><p>A cada 30s verifica mensagens novas e decide: envia menu, chama atendente, ou ignora.</p></div>
+    <div class="arch-card"><div class="icon">🧠</div><h4>Fluxo 2 — Decisor</h4><p>A cada 30s verifica mensagens novas e decide: envia menu, chama atendente, responde com IA, ou ignora.</p></div>
     <div class="arch-card"><div class="icon">🧹</div><h4>Fluxo 3 — Manutenção</h4><p>A cada 15min apaga histórico antigo (+6h) e reseta sessões paradas (+2h) de volta para IDLE.</p></div>
     <div class="arch-card"><div class="icon">📊</div><h4>Google Sheets</h4><p>Memória do sistema. Três abas: <code>data_base</code>, <code>sessions</code>, <code>atendentes</code>.</p></div>
+    <div class="arch-card" style="border-left:3px solid #7c3aed"><div class="icon">🤖</div><h4>IA de suporte (GPT-4o-mini)</h4><p>Enquanto o cliente aguarda o atendente, a IA responde dúvidas usando histórico da conversa.</p></div>
     <div class="arch-card" style="border-left:3px solid #1d4ed8"><div class="icon">🔔</div><h4>Alerta de 15 minutos</h4><p>Se nenhum atendente responder em 15 min após ser chamado, o bot avisa automaticamente o cliente no grupo.</p></div>
   </div>
 
@@ -209,6 +211,7 @@ flowchart LR
     F2 -->|atualiza| SE[(sessions)]
     F2 -->|le| AT[(atendentes)]
     F2 -->|envia msgs| RPA
+    F2 -->|historico IA| DT[(conv history)]
     SCH2[Agenda 15min] --> F3[Fluxo 3 Manutencao]
     F3 -->|limpa| DB
     F3 -->|reseta| SE
@@ -218,6 +221,7 @@ flowchart LR
     style DB fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style SE fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style AT fill:#f3f4f6,stroke:#9ca3af,color:#374151
+    style DT fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style RPA fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style WC fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style SCH fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
@@ -230,17 +234,23 @@ flowchart LR
     <div class="mermaid">
 flowchart LR
     S0([inicio]) --> S1[IDLE]
-    S1 -->|msg relevante| S2[MENU_ENVIADO]
-    S2 -->|numero 1-10| S3[EM_ATENDIMENTO]
-    S3 -->|timeout 2h| S1
-    S3 -. 15min sem resposta .-> ALERTA[Bot avisa cliente]
-    ALERTA -. continua .-> S3
+    S1 -->|msg relevante do cliente| S2[MENU_ENVIADO]
+    S2 -->|numero 1-10 valido| S3[AGUARDANDO_ATENDENTE]
+    S3 -->|atendente responde| S4[EM_ATENDIMENTO]
+    S3 -->|cliente msg durante espera| S3
+    S4 -->|timeout 2h sem msg| S1
+    S4 -. 15min sem atendente .-> ALERTA[Bot avisa cliente]
+    ALERTA -. continua EM_ATENDIMENTO .-> S4
+    S1 -. atendente msg .-> S4
+    S2 -. atendente msg .-> S4
+    S3 -. atendente msg .-> S4
     S1 -. trivial .-> S1
     S2 -. invalida .-> S2
     style S0 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style S1 fill:#dcfce7,stroke:#16a34a,color:#166534
     style S2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
-    style S3 fill:#fef3c7,stroke:#b45309,color:#78350f
+    style S3 fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    style S4 fill:#fef3c7,stroke:#b45309,color:#78350f
     style ALERTA fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     </div>
   </div>
@@ -299,8 +309,8 @@ flowchart LR
 
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Trigger</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>Google Sheets</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>HTTP / WeChat</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>Google Sheets / DataTable</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>HTTP / WeChat / OpenAI</div>
     <div class="legend-item"><div class="legend-dot" style="background:#b45309"></div>Lógica</div>
     <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Cérebro Code</div>
   </div>
@@ -318,10 +328,20 @@ flowchart TD
     G -->|send_menu| H[HTTP Send Menu]
     G -->|call_atendente| I[HTTP Notify Room]
     G -->|ignore| K[(Upsert sessions)]
+    G -->|invalid_option| INV[HTTP Invalid Option]
+    G -->|ai_respond| RCH[(Read conv history)]
     I --> J[HTTP DM Atendente]
     H --> K
     J --> K
-    K --> L[Split rows_to_mark]
+    INV --> K
+    RCH --> BAI[Build AI messages]
+    BAI --> OAI[HTTP OpenAI GPT-4o-mini]
+    OAI --> SAI[HTTP Send AI Response]
+    SAI --> IUM[(Insert user msg)]
+    IUM --> IAI[(Insert AI msg)]
+    IAI --> K
+    K --> RT[rows to mark Set]
+    RT --> L[Split rows_to_mark]
     L --> M[(Mark data_base processed)]
     style A fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style B fill:#dcfce7,stroke:#16a34a,color:#166534
@@ -333,7 +353,15 @@ flowchart TD
     style H fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     style I fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     style J fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style INV fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style RCH fill:#dcfce7,stroke:#16a34a,color:#166534
+    style BAI fill:#fef3c7,stroke:#b45309,color:#78350f
+    style OAI fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style SAI fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style IUM fill:#dcfce7,stroke:#16a34a,color:#166534
+    style IAI fill:#dcfce7,stroke:#16a34a,color:#166534
     style K fill:#dcfce7,stroke:#16a34a,color:#166534
+    style RT fill:#fef3c7,stroke:#b45309,color:#78350f
     style L fill:#fef3c7,stroke:#b45309,color:#78350f
     style M fill:#dcfce7,stroke:#16a34a,color:#166534
     style Z fill:#f3f4f6,stroke:#9ca3af,color:#374151
@@ -348,14 +376,22 @@ flowchart TD
       <tr><td class="node-name">Read data_base</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Busca linhas com processado = FALSE</td></tr>
       <tr><td class="node-name">If</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Para se não houver mensagens (economiza quota da API)</td></tr>
       <tr><td class="node-name">Read sessions</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Carrega o estado atual de todos os grupos</td></tr>
-      <tr><td class="node-name">Read atendentes</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Carrega a tabela opcao para atendente</td></tr>
+      <tr><td class="node-name">Read atendentes</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Carrega a tabela opcao → atendente</td></tr>
       <tr><td class="node-name">Decide Actions</td><td><span class="node-badge" style="background:#fee2e2;color:#7f1d1d">Cérebro</span></td><td>Todo o raciocínio do bot acontece aqui</td></tr>
-      <tr><td class="node-name">Switch action</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Direciona para send_menu / call_atendente / ignore</td></tr>
-      <tr><td class="node-name">HTTP Send Menu</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Envia o menu de opções para o grupo</td></tr>
+      <tr><td class="node-name">Switch action</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Direciona para send_menu / call_atendente / ignore / invalid_option / ai_respond</td></tr>
+      <tr><td class="node-name">HTTP Send Menu</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Envia o menu de opções (1-10) para o grupo</td></tr>
       <tr><td class="node-name">HTTP Notify Room</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Avisa o grupo que o atendente foi chamado</td></tr>
       <tr><td class="node-name">HTTP DM Atendente</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Envia mensagem privada direta ao atendente</td></tr>
+      <tr><td class="node-name">HTTP Invalid Option</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Pede ao cliente para digitar um número válido (1-10)</td></tr>
+      <tr><td class="node-name">Read conv history</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">DataTable</span></td><td>Busca o histórico de conversa do grupo (últimas 10 mensagens)</td></tr>
+      <tr><td class="node-name">Build AI messages</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Código</span></td><td>Monta o array de mensagens (system + histórico + msg atual) para a API do OpenAI</td></tr>
+      <tr><td class="node-name">HTTP OpenAI</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Chama GPT-4o-mini com o histórico e retorna resposta em chinês</td></tr>
+      <tr><td class="node-name">HTTP Send AI Response</td><td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">HTTP</span></td><td>Envia a resposta da IA para o grupo via RPA</td></tr>
+      <tr><td class="node-name">Insert user msg</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">DataTable</span></td><td>Salva a mensagem do cliente no histórico (role: user)</td></tr>
+      <tr><td class="node-name">Insert AI msg</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">DataTable</span></td><td>Salva a resposta da IA no histórico (role: assistant)</td></tr>
       <tr><td class="node-name">Upsert sessions</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Cria ou atualiza a linha do grupo em sessions</td></tr>
-      <tr><td class="node-name">Split rows_to_mark</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Lógica</span></td><td>Expande a lista de linhas para atualizar uma por uma</td></tr>
+      <tr><td class="node-name">rows_to_mark</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Set</span></td><td>Extrai o array de row_numbers a marcar do item atual</td></tr>
+      <tr><td class="node-name">Split rows_to_mark</td><td><span class="node-badge" style="background:#fef3c7;color:#78350f">Split</span></td><td>Expande a lista de linhas para atualizar uma por uma</td></tr>
       <tr><td class="node-name">Mark data_base processed</td><td><span class="node-badge" style="background:#dcfce7;color:#166534">Sheets</span></td><td>Marca processado=TRUE e grava o código de decisão</td></tr>
     </table>
   </div>
@@ -367,41 +403,47 @@ flowchart TD
       <tr>
         <td><span class="node-badge" style="background:#dcfce7;color:#166534">IDLE</span></td>
         <td>Nenhum atendimento em curso. O grupo está em repouso.</td>
-        <td>O bot — irá enviar o menu na próxima mensagem relevante do cliente</td>
+        <td>O bot — irá enviar o menu na próxima mensagem relevante do cliente. Atendente que escrever transiciona direto para EM_ATENDIMENTO.</td>
       </tr>
       <tr>
         <td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">MENU_ENVIADO</span></td>
         <td>O menu de opções foi enviado. O bot aguarda o cliente digitar 1-10.</td>
-        <td>O bot — qualquer mensagem que não seja número válido é ignorada silenciosamente</td>
+        <td>O bot — qualquer mensagem inválida é ignorada silenciosamente. Atendente que escrever transiciona direto para EM_ATENDIMENTO.</td>
+      </tr>
+      <tr>
+        <td><span class="node-badge" style="background:#ede9fe;color:#4c1d95">AGUARDANDO_ATENDENTE</span></td>
+        <td>O cliente escolheu uma opção. O atendente foi chamado mas ainda não respondeu no grupo.</td>
+        <td>A IA (GPT-4o-mini) — responde dúvidas do cliente enquanto aguarda. Atendente que escrever transiciona para EM_ATENDIMENTO.</td>
       </tr>
       <tr>
         <td><span class="node-badge" style="background:#fef3c7;color:#78350f">EM_ATENDIMENTO</span></td>
-        <td>O atendente foi chamado e está (ou deveria estar) cuidando do grupo. Se 15 min passarem sem resposta, o bot envia aviso automático ao cliente.</td>
-        <td>O atendente humano — o bot fica silencioso, exceto pelo alerta de 15 min</td>
+        <td>O atendente está cuidando do grupo. Se 15 min passarem sem nenhuma msg do atendente após ter sido chamado, o bot envia aviso automático ao cliente.</td>
+        <td>O atendente humano — o bot fica completamente silencioso, exceto pelo alerta de 15 min.</td>
       </tr>
     </table>
   </div>
 
   <div class="diagram-card">
     <h3>Colunas da aba <code>sessions</code> — referência completa</h3>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">O Decisor lê e atualiza estas colunas a cada ciclo. As duas últimas foram adicionadas para o sistema de alerta de 15 minutos.</p>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">O Decisor lê e atualiza estas colunas a cada ciclo.</p>
     <table>
       <tr><th>Coluna</th><th>Quem escreve</th><th>O que guarda</th></tr>
       <tr><td class="node-name">room_id</td><td>Decisor</td><td>ID do grupo no WeChat — chave primária da tabela</td></tr>
-      <tr><td class="node-name">estado</td><td>Decisor</td><td><code>IDLE</code> / <code>MENU_ENVIADO</code> / <code>EM_ATENDIMENTO</code></td></tr>
+      <tr><td class="node-name">estado</td><td>Decisor</td><td><code>IDLE</code> / <code>MENU_ENVIADO</code> / <code>AGUARDANDO_ATENDENTE</code> / <code>EM_ATENDIMENTO</code></td></tr>
       <tr><td class="node-name">bot_permission</td><td>Admin (manual)</td><td><code>0</code> = bot inativo &nbsp;|&nbsp; <code>1</code> = bot ativo</td></tr>
       <tr><td class="node-name">last_user_msg_at</td><td>Decisor</td><td>Horário da última mensagem do cliente. Usado pela Manutenção para o reset de 2h.</td></tr>
       <tr><td class="node-name">last_bot_action_at</td><td>Decisor</td><td>Horário da última ação do bot (qualquer ação, inclusive ignores).</td></tr>
+      <tr><td class="node-name">last_atendente_msg_at</td><td>Decisor</td><td>Horário da última mensagem enviada por um atendente no grupo. Atualizado sempre que qualquer atendente escreve.</td></tr>
       <tr><td class="node-name">opcao_escolhida</td><td>Decisor</td><td>Número (1-10) que o cliente selecionou no menu.</td></tr>
       <tr><td class="node-name">atendente_wxid</td><td>Decisor</td><td>wxid do atendente que foi chamado.</td></tr>
-      <tr><td class="node-name" style="color:#1d4ed8">atendente_chamado_at</td><td>Decisor</td><td><strong>Novo.</strong> Horário exato em que o bot chamou o atendente. Timer de base para o alerta de 15 min.</td></tr>
-      <tr><td class="node-name" style="color:#1d4ed8">alerta_enviado</td><td>Decisor / Manutenção</td><td><strong>Novo.</strong> <code>FALSE</code> quando atendente é chamado. Vira <code>TRUE</code> após o alerta de 15 min ser enviado — evita repetição.</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8">atendente_chamado_at</td><td>Decisor</td><td>Horário exato em que o bot chamou o atendente. Timer de base para o alerta de 15 min.</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8">alerta_enviado</td><td>Decisor / Manutenção</td><td><code>FALSE</code> quando atendente é chamado. Vira <code>TRUE</code> após o alerta de 15 min ser enviado — evita repetição.</td></tr>
     </table>
   </div>
 
   <div class="diagram-card">
     <h3>Códigos de decisão (coluna <code>decisao</code> no data_base)</h3>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">Cada mensagem processada pelo Decisor recebe um código na coluna <code>decisao</code> da planilha <code>data_base</code>. Use esses códigos para auditar o comportamento do bot.</p>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">Cada mensagem processada pelo Decisor recebe um código na coluna <code>decisao</code>. Use para auditar o comportamento do bot.</p>
     <table>
       <tr><th>Código</th><th>Estado em que ocorre</th><th>Quando aparece</th></tr>
       <tr>
@@ -412,11 +454,36 @@ flowchart TD
       <tr>
         <td><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></td>
         <td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">MENU_ENVIADO</span></td>
-        <td>Cliente escolheu opção N — atendente avisado no grupo e por mensagem direta</td>
+        <td>Cliente escolheu opção N — atendente avisado no grupo e por DM. Sessão vai para AGUARDANDO_ATENDENTE.</td>
+      </tr>
+      <tr>
+        <td><span class="tag" style="background:#ede9fe;color:#4c1d95">IA_RESPONDEU</span></td>
+        <td><span class="node-badge" style="background:#ede9fe;color:#4c1d95">AGUARDANDO_ATENDENTE</span></td>
+        <td>Cliente mandou msg enquanto aguardava — IA respondeu. Sessão permanece AGUARDANDO_ATENDENTE.</td>
+      </tr>
+      <tr>
+        <td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_IDLE</span></td>
+        <td><span class="node-badge" style="background:#dcfce7;color:#166534">IDLE</span></td>
+        <td>Atendente enviou msg com a sessão em IDLE — transiciona direto para EM_ATENDIMENTO.</td>
+      </tr>
+      <tr>
+        <td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_MENU_ENVIADO</span></td>
+        <td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">MENU_ENVIADO</span></td>
+        <td>Atendente enviou msg com menu aberto — transiciona direto para EM_ATENDIMENTO.</td>
+      </tr>
+      <tr>
+        <td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_AGUARDANDO_ATENDENTE</span></td>
+        <td><span class="node-badge" style="background:#ede9fe;color:#4c1d95">AGUARDANDO_ATENDENTE</span></td>
+        <td>Atendente chegou e respondeu — transiciona para EM_ATENDIMENTO.</td>
+      </tr>
+      <tr>
+        <td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_EM_ATENDIMENTO</span></td>
+        <td><span class="node-badge" style="background:#fef3c7;color:#78350f">EM_ATENDIMENTO</span></td>
+        <td>Atendente enviou mais uma msg durante o atendimento — atualiza last_atendente_msg_at.</td>
       </tr>
       <tr>
         <td><span class="tag" style="background:#fee2e2;color:#7f1d1d">BOT_SEM_PERMISSAO</span></td>
-        <td>qualquer</td>
+        <td>qualquer (msg de cliente)</td>
         <td><code>bot_permission = 0</code> — bot inativo neste grupo</td>
       </tr>
       <tr>
@@ -425,19 +492,19 @@ flowchart TD
         <td>Mensagem era "ok", sticker, emoji de reação — sem resposta</td>
       </tr>
       <tr>
-        <td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_RESPOSTA_INVALIDA_NO_MENU</span></td>
+        <td><span class="tag" style="background:#f3f4f6;color:#374151">OPCAO_INVALIDA_NO_MENU</span></td>
         <td><span class="node-badge" style="background:#dbeafe;color:#1e3a8a">MENU_ENVIADO</span></td>
-        <td>Cliente não respondeu um número válido de 1 a 10</td>
+        <td>Cliente não respondeu um número válido de 1 a 10 — bot pede para tentar novamente</td>
       </tr>
       <tr>
         <td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_EM_ATENDIMENTO</span></td>
         <td><span class="node-badge" style="background:#fef3c7;color:#78350f">EM_ATENDIMENTO</span></td>
-        <td>Atendente humano no controle — bot fica quieto</td>
+        <td>Mensagem de cliente com atendente humano no controle — bot fica quieto</td>
       </tr>
       <tr>
         <td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_NAO_CLIENTE</span></td>
         <td>qualquer</td>
-        <td>Mensagem enviada pelo próprio bot ou pelo atendente</td>
+        <td>Mensagem não-texto, do próprio bot, ou fora de grupos</td>
       </tr>
       <tr>
         <td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_ESTADO_DESCONHECIDO</span></td>
@@ -542,22 +609,26 @@ flowchart TD
     F1 -->|Sim| F2[Agrupa por room_id pega a mais recente]
     F2 --> F3{Menos de 3s atras}
     F3 -->|Sim| WAIT[Aguarda proxima rodada]
-    F3 -->|Nao| F4{Permissao igual 1}
+    F3 -->|Nao| FA{E um atendente}
+    FA -->|Sim| ATEN[ATENDENTE MSG EM estado anterior - vai para EM_ATENDIMENTO - atualiza last_atendente_msg_at]
+    FA -->|Nao| F4{Permissao igual 1}
     F4 -->|Nao| NOPERM[BOT_SEM_PERMISSAO]
     F4 -->|Sim| F5{Estado atual}
     F5 -->|IDLE| F6{E trivial}
-    F6 -->|Sim| IGN1[IGNORADA_TRIVIAL]
-    F6 -->|Nao| ACT1[ENVIOU_MENU]
+    F6 -->|Sim| IGN1[IGNORADA_TRIVIAL_EM_IDLE]
+    F6 -->|Nao| ACT1[ENVIOU_MENU - vai para MENU_ENVIADO]
     F5 -->|MENU_ENVIADO| F8{Numero 1 a 10}
-    F8 -->|Nao| IGN2[IGNORADA_INVALIDA]
+    F8 -->|Nao| IGN2[OPCAO_INVALIDA_NO_MENU]
     F8 -->|Sim| F9{Atendente existe}
     F9 -->|Nao| IGN2
-    F9 -->|Sim| ACT2[CHAMOU_ATENDENTE]
+    F9 -->|Sim| ACT2[CHAMOU_ATENDENTE - vai para AGUARDANDO_ATENDENTE]
+    F5 -->|AGUARDANDO_ATENDENTE| IAI[IA_RESPONDEU - IA responde e permanece em AGUARDANDO]
     F5 -->|EM_ATENDIMENTO| IGN3[IGNORADA_EM_ATENDIMENTO]
     style IN fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
     style F1 fill:#fef3c7,stroke:#b45309,color:#78350f
     style F2 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style F3 fill:#fef3c7,stroke:#b45309,color:#78350f
+    style FA fill:#fef3c7,stroke:#b45309,color:#78350f
     style F4 fill:#fef3c7,stroke:#b45309,color:#78350f
     style F5 fill:#fef3c7,stroke:#b45309,color:#78350f
     style F6 fill:#fef3c7,stroke:#b45309,color:#78350f
@@ -565,6 +636,8 @@ flowchart TD
     style F9 fill:#fef3c7,stroke:#b45309,color:#78350f
     style ACT1 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
     style ACT2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    style IAI fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    style ATEN fill:#fef3c7,stroke:#b45309,color:#78350f
     style IGN0 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style IGN1 fill:#f3f4f6,stroke:#9ca3af,color:#374151
     style IGN2 fill:#f3f4f6,stroke:#9ca3af,color:#374151
@@ -590,47 +663,53 @@ flowchart TD
         <div class="step-body"><h4>Debounce de 3 segundos</h4><p>Se a mensagem chegou há menos de 3 segundos, pula o grupo nessa rodada. Protege contra ráfagas: 10 mensagens rápidas geram uma só resposta.</p></div>
       </div>
       <div class="step">
-        <div class="step-num" style="background:#fee2e2;color:#7f1d1d">4</div>
+        <div class="step-num" style="background:#fef3c7;color:#b45309">4</div>
+        <div class="step-body"><h4>Check de atendente (prioridade máxima)</h4><p>Antes de qualquer outra verificação: se o remetente for um atendente cadastrado na aba <code>atendentes</code>, a sessão transiciona imediatamente para <code>EM_ATENDIMENTO</code> e <code>last_atendente_msg_at</code> é atualizado. Nenhuma mensagem do bot é enviada. Isso se aplica a qualquer estado — inclusive IDLE, MENU_ENVIADO ou AGUARDANDO_ATENDENTE.</p><div class="tags"><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_{ESTADO}</span></div></div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#fee2e2;color:#7f1d1d">5</div>
         <div class="step-body"><h4>Verificação de bot_permission</h4><p>Só opera em grupos com <code>bot_permission = 1</code> na aba sessions. Grupos novos entram com 0 por padrão — o admin ativa manualmente.</p><div class="tags"><span class="tag" style="background:#fee2e2;color:#7f1d1d">BOT_SEM_PERMISSAO</span></div></div>
       </div>
       <div class="step">
-        <div class="step-num" style="background:#dbeafe;color:#1e3a8a">5</div>
+        <div class="step-num" style="background:#dbeafe;color:#1e3a8a">6</div>
         <div class="step-body"><h4>Roteamento — IDLE</h4><p>Mensagem trivial (ok, 好的, 👍, sticker)? Ignora. Qualquer outra coisa? Manda o menu.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_TRIVIAL_EM_IDLE</span><span class="tag" style="background:#dbeafe;color:#1e3a8a">ENVIOU_MENU</span></div></div>
       </div>
       <div class="step">
-        <div class="step-num" style="background:#dbeafe;color:#1e3a8a">6</div>
-        <div class="step-body"><h4>Roteamento — MENU_ENVIADO</h4><p>Aguarda o cliente escolher 1-10. Aceita "3", "(3)", "选3" etc. Se válido e atendente cadastrado, chama o atendente via HTTP (grupo + mensagem privada) e grava <code>atendente_chamado_at</code> com o horário exato — esse campo é usado pelo Fluxo 3 para disparar o alerta de 15 min. Também define <code>alerta_enviado = FALSE</code>. Caso a resposta seja inválida, silêncio.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_RESPOSTA_INVALIDA_NO_MENU</span><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></div></div>
+        <div class="step-num" style="background:#dbeafe;color:#1e3a8a">7</div>
+        <div class="step-body"><h4>Roteamento — MENU_ENVIADO</h4><p>Aguarda o cliente escolher 1-10. Aceita "3", "(3)", "选3" etc. Se válido e atendente cadastrado, chama o atendente via HTTP (grupo + DM) e grava <code>atendente_chamado_at</code> com o horário exato. Também define <code>alerta_enviado = FALSE</code>. Caso a resposta seja inválida, o bot pede para tentar novamente.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">OPCAO_INVALIDA_NO_MENU</span><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></div></div>
       </div>
       <div class="step">
-        <div class="step-num" style="background:#f3f4f6;color:#374151">7</div>
+        <div class="step-num" style="background:#ede9fe;color:#4c1d95">8</div>
+        <div class="step-body"><h4>Roteamento — AGUARDANDO_ATENDENTE</h4><p>Atendente foi chamado mas ainda não apareceu. Mensagens do cliente são respondidas pela IA (GPT-4o-mini) usando o histórico da conversa. Histórico salvo na DataTable <code>conv history</code>. Sessão permanece em AGUARDANDO_ATENDENTE.</p><div class="tags"><span class="tag" style="background:#ede9fe;color:#4c1d95">IA_RESPONDEU</span></div></div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#f3f4f6;color:#374151">9</div>
         <div class="step-body"><h4>Roteamento — EM_ATENDIMENTO</h4><p>Atendente humano no controle. Bot completamente silencioso — só marca as mensagens como processadas.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_EM_ATENDIMENTO</span></div></div>
       </div>
       <div class="step">
-        <div class="step-num" style="background:#f3f4f6;color:#374151">8</div>
-        <div class="step-body"><h4>Limpeza das linhas restantes</h4><p>Após processar clientes, marca como processado tudo que sobrou (bot, atendentes, imagens). Garante que nenhuma linha acumule.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_NAO_CLIENTE</span></div></div>
+        <div class="step-num" style="background:#f3f4f6;color:#374151">10</div>
+        <div class="step-body"><h4>Limpeza das linhas restantes</h4><p>Após processar todos os grupos, marca como processado tudo que sobrou (bot, imagens, mensagens de outros tipos). Garante que nenhuma linha acumule indefinidamente.</p><div class="tags"><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_NAO_CLIENTE</span></div></div>
       </div>
     </div>
   </div>
 
   <div class="diagram-card" style="border-left:4px solid #1d4ed8">
-    <h3>Campos gravados no Upsert sessions — referência v2</h3>
+    <h3>Campos gravados no Upsert sessions — referência</h3>
     <p style="font-size:13px;color:#6b7280;margin-bottom:14px">
-      Para cada ação, o Decisor devolve estes campos no output do Code node. O nó <code>Upsert sessions</code> usa todos eles.
-      Os campos marcados em azul são novos na v2.
-    </p>
-    <table>
-      <tr><th>Campo</th><th>send_menu</th><th>call_atendente</th><th>ignore</th></tr>
-      <tr><td class="node-name">estado</td><td>MENU_ENVIADO</td><td>EM_ATENDIMENTO</td><td>preserva atual</td></tr>
-      <tr><td class="node-name">last_user_msg_at</td><td>agora</td><td>agora</td><td>preserva / agora</td></tr>
-      <tr><td class="node-name">bot_permission</td><td>preserva</td><td>preserva</td><td>preserva</td></tr>
-      <tr><td class="node-name">opcao_escolhida</td><td>—</td><td>N (ex: "3")</td><td>preserva</td></tr>
-      <tr><td class="node-name">atendente_wxid</td><td>—</td><td>wxid do atendente</td><td>preserva</td></tr>
-      <tr><td class="node-name" style="color:#1d4ed8;font-weight:700">atendente_chamado_at</td><td>preserva</td><td><strong>agora (timestamp)</strong></td><td>preserva</td></tr>
-      <tr><td class="node-name" style="color:#1d4ed8;font-weight:700">alerta_enviado</td><td>preserva</td><td><strong>FALSE (reset)</strong></td><td>preserva</td></tr>
-    </table>
-    <p style="font-size:12px;color:#9ca3af;margin-top:12px">
+      Para cada ação, o Decisor devolve estes campos. O nó <code>Upsert sessions</code> usa todos eles.
       "preserva" = devolve o valor que já estava em sessions, para o Upsert não sobrescrever com vazio.
     </p>
+    <table>
+      <tr><th>Campo</th><th>atendente msg</th><th>send_menu</th><th>call_atendente</th><th>ai_respond</th><th>ignore</th></tr>
+      <tr><td class="node-name">estado</td><td>EM_ATENDIMENTO</td><td>MENU_ENVIADO</td><td>AGUARDANDO_ATENDENTE</td><td>AGUARDANDO_ATENDENTE</td><td>preserva atual</td></tr>
+      <tr><td class="node-name">last_user_msg_at</td><td>preserva</td><td>agora</td><td>agora</td><td>agora</td><td>preserva</td></tr>
+      <tr><td class="node-name">last_atendente_msg_at</td><td><strong>agora</strong></td><td>preserva</td><td>preserva</td><td>preserva</td><td>preserva</td></tr>
+      <tr><td class="node-name">bot_permission</td><td>preserva</td><td>preserva</td><td>preserva</td><td>preserva</td><td>preserva</td></tr>
+      <tr><td class="node-name">opcao_escolhida</td><td>preserva</td><td>—</td><td>N (ex: "3")</td><td>preserva</td><td>preserva</td></tr>
+      <tr><td class="node-name">atendente_wxid</td><td>preserva</td><td>—</td><td>wxid do atendente</td><td>preserva</td><td>preserva</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8;font-weight:700">atendente_chamado_at</td><td>preserva</td><td>preserva</td><td><strong>agora (timestamp)</strong></td><td>preserva</td><td>preserva</td></tr>
+      <tr><td class="node-name" style="color:#1d4ed8;font-weight:700">alerta_enviado</td><td>preserva</td><td>preserva</td><td><strong>FALSE (reset)</strong></td><td>preserva</td><td>preserva</td></tr>
+    </table>
   </div>
 
   <div class="diagram-card">
@@ -638,12 +717,17 @@ flowchart TD
     <table>
       <tr><th>Código</th><th>Quando aparece</th></tr>
       <tr><td><span class="tag" style="background:#dbeafe;color:#1e3a8a">ENVIOU_MENU</span></td><td>Bot enviou o menu de opções para o grupo</td></tr>
-      <tr><td><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></td><td>Cliente escolheu opção N — atendente avisado no grupo e por DM</td></tr>
+      <tr><td><span class="tag" style="background:#dbeafe;color:#1e3a8a">CHAMOU_ATENDENTE_N</span></td><td>Cliente escolheu opção N — atendente avisado no grupo e por DM. Sessão → AGUARDANDO_ATENDENTE.</td></tr>
+      <tr><td><span class="tag" style="background:#ede9fe;color:#4c1d95">IA_RESPONDEU</span></td><td>IA respondeu enquanto cliente aguardava atendente. Sessão permanece AGUARDANDO_ATENDENTE.</td></tr>
+      <tr><td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_IDLE</span></td><td>Atendente escreveu com sessão em IDLE → transiciona para EM_ATENDIMENTO</td></tr>
+      <tr><td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_MENU_ENVIADO</span></td><td>Atendente escreveu com menu aberto → transiciona para EM_ATENDIMENTO</td></tr>
+      <tr><td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_AGUARDANDO_ATENDENTE</span></td><td>Atendente chegou e respondeu → transiciona para EM_ATENDIMENTO</td></tr>
+      <tr><td><span class="tag" style="background:#fef3c7;color:#78350f">ATENDENTE_MSG_EM_EM_ATENDIMENTO</span></td><td>Atendente enviou mais uma msg → atualiza last_atendente_msg_at</td></tr>
       <tr><td><span class="tag" style="background:#fee2e2;color:#7f1d1d">BOT_SEM_PERMISSAO</span></td><td>bot_permission = 0 neste grupo — bot inativo</td></tr>
       <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_TRIVIAL_EM_IDLE</span></td><td>Mensagem era "ok", sticker etc. — sem resposta</td></tr>
-      <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_RESPOSTA_INVALIDA_NO_MENU</span></td><td>Cliente não respondeu número válido ao menu</td></tr>
-      <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_EM_ATENDIMENTO</span></td><td>Atendente humano no controle — bot quieto</td></tr>
-      <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_NAO_CLIENTE</span></td><td>Mensagem do bot ou do atendente</td></tr>
+      <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">OPCAO_INVALIDA_NO_MENU</span></td><td>Cliente não respondeu número válido ao menu — bot pede para tentar novamente</td></tr>
+      <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_EM_ATENDIMENTO</span></td><td>Mensagem de cliente com atendente humano no controle — bot quieto</td></tr>
+      <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_NAO_CLIENTE</span></td><td>Mensagem do bot, imagem, ou tipo não-texto</td></tr>
       <tr><td><span class="tag" style="background:#f3f4f6;color:#374151">IGNORADA_ESTADO_DESCONHECIDO</span></td><td>Estado inválido — tratado como IDLE na próxima rodada</td></tr>
     </table>
   </div>
@@ -670,12 +754,9 @@ mermaid.initialize({
 });
 
 // Renderiza todos os diagramas de uma vez, mesmo os em abas ocultas.
-// Para isso, tornamos todas as abas visíveis temporariamente (visibility:visible
-// mas fora do fluxo), rodamos o Mermaid, depois restauramos o estado.
 document.addEventListener('DOMContentLoaded', async () => {
   const panes = document.querySelectorAll('.pane');
 
-  // Torna todos visíveis para o Mermaid poder calcular dimensões
   panes.forEach(p => {
     p.style.display = 'block';
     p.style.position = 'absolute';
@@ -683,10 +764,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     p.style.pointerEvents = 'none';
   });
 
-  // Processa todos os diagramas
   await mermaid.run({ querySelector: '.mermaid' });
 
-  // Restaura o estado original
   panes.forEach(p => {
     p.style.display = '';
     p.style.position = '';
